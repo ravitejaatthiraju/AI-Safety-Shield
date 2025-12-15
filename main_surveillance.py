@@ -2,11 +2,25 @@ import cv2
 import time
 import sys
 import os
+import json # ✅ Required to read the config file
 
 # --- IMPORTS ---
 from audio_thread import AudioThread 
 from weapon_detector import get_weapon_score
 from proximity_logic import get_proximity_score
+
+# ✅ NEW: Helper function to get the dynamic email from the file server.py created
+def get_receiver_email():
+    """Reads the receiver email from the shared config file."""
+    default_email = "atthirajuraviteja26@gmail.com" # Fallback
+    try:
+        if os.path.exists('email_config.json'):
+            with open('email_config.json', 'r') as f:
+                data = json.load(f)
+                return data.get('email', default_email)
+    except Exception as e:
+        print(f"⚠️ Error reading email config: {e}")
+    return default_email
 
 # ✅ Import Pose Module
 try:
@@ -15,16 +29,15 @@ except ImportError:
     print("⚠️ WARNING: pose_module.py not found. Pose detection disabled.")
     def get_pose_score(f): return 0
 
-# ✅ NEW: Import your Email Alert Module
-# This imports the function that sends the location-based email
+# ✅ Import Email Alert Module
 try:
     from email_alert_module import send_danger_alert
     print("✅ Email Alert System Loaded.")
 except ImportError:
     print("⚠️ WARNING: email_alert_module.py not found. Alerts will be printed to console only.")
     # Fallback function if the file is missing
-    def send_danger_alert(score, reason):
-        print(f"🚨 [CONSOLE ALERT] Score: {score} | Reason: {reason}")
+    def send_danger_alert(score, reason, email):
+        print(f"🚨 [CONSOLE ALERT] To: {email} | Score: {score} | Reason: {reason}")
 
 def main():
     # 1. FAST CAMERA SETUP
@@ -47,7 +60,6 @@ def main():
     current_weapons_detected = []
     
     # Alert Cooldown (Prevents spamming Emails/Sound)
-    # 150 frames approx 5-8 seconds depending on FPS
     alert_cooldown = 0 
     
     # 4. START AUDIO ENGINE
@@ -128,13 +140,14 @@ def main():
                     # Join them (e.g., "Weapon Detected, Distress Scream")
                     threat_message = ", ".join(reason_list) if reason_list else "Unknown Danger"
                     
-                    # 2. Call your external Email Alert Module
-                    # This sends the Email with Location Map
-                    print(f"🚀 Triggering Email Alert: {threat_message}")
-                    send_danger_alert(total_score, threat_message)
+                    # 2. Get Dynamic Email & Trigger Alert
+                    target_email = get_receiver_email() # ✅ Fetch latest email
+                    print(f"🚀 Triggering Email Alert to {target_email}: {threat_message}")
                     
-                    # 3. Activate Cooldown (wait ~10-15 seconds before next email to avoid spam)
-                    # Increased slightly for email (300 frames)
+                    # Pass the dynamic email to the alert function
+                    send_danger_alert(total_score, threat_message, target_email)
+                    
+                    # 3. Activate Cooldown (wait ~10-15 seconds before next email)
                     alert_cooldown = 300 
             
             # Decrease cooldown timer if it's active
@@ -151,7 +164,7 @@ def main():
             if total_score >= ALERT_THRESHOLD:
                 color = (0, 0, 255) # Red
                 status = "DANGER DETECTED"
-                border_thickness = 10 # Thick red border on screen
+                border_thickness = 10 
             elif total_score >= 35:
                 color = (0, 255, 255) # Yellow
                 status = "WARNING"

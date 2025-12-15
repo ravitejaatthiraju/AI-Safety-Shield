@@ -1,74 +1,76 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
-import geocoder
-import threading
+import geocoder # NEW: Import geocoder for location fetching
 
 # --- CONFIGURATION ---
-# Replace with your details. 
-# NOTE: For Gmail, use an 'App Password', not your login password.
-SENDER_EMAIL = "athirajuteja5@gmail.com"
-EMAIL_PASSWORD = "ysfm rkgs cozo lmdg" 
-RECEIVER_EMAIL = "atthirajuraviteja26@gmail.com"
+SENDER_EMAIL = "athirajuteja5@gmail.com" 
+SENDER_PASSWORD = "ysfm rkgs cozo lmdg" 
 
+# --- LOCATION FETCHING ---
 def get_current_location():
     """
     Fetches approximate location using IP address.
-    Returns: A Google Maps link.
+    Returns: A Google Maps link or a status message.
     """
     try:
-        g = geocoder.ip('me') # Gets location from public IP
+        g = geocoder.ip('me') 
         if g.latlng:
             latitude, longitude = g.latlng
-            return f"https://www.google.com/maps?q={latitude},{longitude}"
-        return "Location Unavailable (Could not determine coordinates)"
+            # Generates a Google Maps link for the coordinates
+            return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+        return "Location Unavailable (IP Geo-location failed)"
     except Exception as e:
-        return "Location Error"
+        return f"Location Error: {e}"
 
-def _send_async_email(score, reason):
+# --- MAIN ALERT FUNCTION ---
+def send_danger_alert(score, reason, receiver_email):
     """
-    Internal function to handle the sending process.
+    Sends an email alert when a threat is detected, including location.
     """
+    # 1. Fetch Location
+    loc_link = get_current_location()
+
+    subject = f"🚨 SECURITY ALERT: Threat Detected (Score: {score})"
+    
+    body = f"""
+⚠️ DANGER DETECTED ⚠️
+
+The AI Surveillance System has flagged a high-priority threat.
+
+------------------------------------------------
+- Threat Score: {score}/100
+- Reason: {reason}
+- Location Map: {loc_link}
+------------------------------------------------
+
+Please check the live feed or contact the location immediately.
+"""
+
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg['Subject'] = subject
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = receiver_email
+
     try:
-        # 1. Get Location
-        print("📍 Fetching location...", end="\r")
-        loc_link = get_current_location()
-
-        # 2. Build Email
-        msg = EmailMessage()
-        msg['Subject'] = f"🚨 DANGER ALERT: {reason} Detected!"
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECEIVER_EMAIL
-
-        body_content = (
-            f"⚠️ AUTOMATED SECURITY ALERT ⚠️\n\n"
-            f"The AI Safety Shield has detected a potential threat.\n"
-            f"------------------------------------------------\n"
-            f"• Threat Reason: {reason}\n"
-            f"• Threat Score:  {score}\n"
-            f"• Location Map:  {loc_link}\n"
-            f"------------------------------------------------\n"
-            f"Please check the live feed or contact the location immediately."
-        )
-        msg.set_content(body_content)
-
-        # 3. Send via Gmail SMTP
+        # Create a secure SSL context
         context = ssl.create_default_context()
-        # Note: 465 is the standard SSL port for Gmail
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
-            smtp.login(SENDER_EMAIL, EMAIL_PASSWORD)
-            smtp.send_message(msg)
         
-        print(f"\n✅ Email Alert Sent to {RECEIVER_EMAIL}!")
-
+        # Connect to Gmail's SMTP Server
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+            smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
+            smtp.send_message(msg)
+            
+        print(f"✅ Email Alert sent successfully to {receiver_email}!")
+        return True
+        
     except Exception as e:
-        print(f"\n❌ Failed to send email alert: {e}")
+        print(f"❌ Failed to send email. Error: {e}")
+        return False
 
-def send_danger_alert(score, reason):
-    """
-    Wrapper to run the email sender in a background thread.
-    This prevents the camera video from freezing while sending.
-    """
-    email_thread = threading.Thread(target=_send_async_email, args=(score, reason))
-    email_thread.daemon = True # Ensures thread dies if main program closes
-    email_thread.start()
+# --- TEST FUNCTION ---
+if __name__ == "__main__":
+    test_receiver = "atthirajuraviteja26@gmail.com" 
+    print("Testing email system...")
+    send_danger_alert(99, "TEST RUN - IGNORE", test_receiver)
