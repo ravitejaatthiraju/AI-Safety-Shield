@@ -1,4 +1,9 @@
 # 🛡 AI Safety Shield – Intelligent Surveillance System
+![Python](https://img.shields.io/badge/Python-3.8+-blue)
+![React](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61dafb)
+![AI](https://img.shields.io/badge/AI-Computer%20Vision%20%26%20Audio-success)
+![YOLO](https://img.shields.io/badge/Model-YOLOv8-orange)
+![Status](https://img.shields.io/badge/Status-Prototype-yellow)
 
 AI Safety Shield is a **real-time, multimodal surveillance system** designed to detect threats in public or private spaces. It combines **computer vision** and **audio intelligence** to identify weapons, distress screams, aggressive postures, and overcrowding, and instantly alerts administrators via a **live dashboard** and **email notifications**.
 
@@ -165,6 +170,11 @@ AI-Safety-Shield/
 **Fix:** Audio is optional. Backend continues running with video-only mode.
 
 ---
+## 🔮 Future Scope
+- Mobile alerts (SMS/WhatsApp)
+- Cloud deployment
+- Face recognition
+
 
 ## 📌 Summary
 
